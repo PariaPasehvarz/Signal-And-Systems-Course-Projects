@@ -1,0 +1,6 @@
+[x, sampling_freq] = audioread("Recording.wav");
+
+% listening to audiofile
+player = audioplayer(x, sampling_freq);
+
+% save x as a wav

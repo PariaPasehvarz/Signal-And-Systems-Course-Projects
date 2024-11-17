@@ -1,0 +1,2 @@
+[x, sammpling_freq] = audioread("Recording.wav");
+disp("File smapling frequency:")
