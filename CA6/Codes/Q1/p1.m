@@ -1,0 +1,143 @@
+%%
+clc
+clear all
+close all
+
+%% PLOT SENT SIGNAL
+
+f_s = 100;
+f_c = 5;
+t_start = 0;
+t_end = 1;
+
+t = linspace(t_start , t_end, f_s+1);
+t(end) = [];
+
+x_t = cos(2*pi*f_c*t);
+
+figure;
+plot(t, x_t, 'c', 'LineWidth', 1.5);
+xlabel('Time (s)');
+ylabel('Amplitude');
+title('Signal x(t) = cos(2\pi f_c t)');
+grid on;
+
+%% PLOT RECEIVED SIGNAL
+
+alpha = 0.5;
+betha = 0.3;
+c = 3e08;
+R = 250000;
+V = 180 * 1000 / 3600;
+t_d = 2/c*R;
+f_d = betha*V;
+y_t = alpha * cos(2*pi*(f_c+f_d)*(t-t_d));
+
+figure;
+plot(t, y_t, 'g', 'LineWidth', 1.5);
+xlabel('Time (s)');
+ylabel('Amplitude');
+title('Received Signal y(t) = a cos(2\pi(f_c + f_d)(t - t_d))');
+grid on;
+
+%% ESTIMATE VELOCITY AND DISTANCE USE RECEIVED SIGNAL
+
+[estimated_V, estimated_R] = estimate_speed_and_distance(y_t, f_s, f_c, c , betha);
+disp(['Estimated Velocity: ', num2str(estimated_V)])
+disp(['Estimated Distance: ', num2str(estimated_R)])
+fprintf('\n');
+
+%% ESTIMATE VELOCITY AND DISTANCE USE RECEIVED SIGNAL, INCLUDED NOISE
+
+noise_levels = 0:0.01:2;
+v_detected = true(size(noise_levels));
+R_detected = true(size(noise_levels));
+
+for i = 1:length(noise_levels)
+    noise = noise_levels(i) * randn(1, f_s);
+    noisy_signal = y_t + noise;
+
+    [found_V, found_R] = estimate_speed_and_distance(noisy_signal, f_s, f_c, c, betha);
+
+    % disp(['Noise Level: ', num2str(noise_levels(i))]);
+    % disp(['Estimated Velocity: ', num2str(found_V)]);
+    % disp(['Estimated Distance: ', num2str(found_R)]);
+    % disp('***************************************');
+
+    if V ~= found_V
+        v_detected(i) = false;
+    end
+    if R ~= found_R
+        R_detected(i) = false;
+    end
+end
+
+% Determine sensitivity
+v_noise_limit = noise_levels(find(~v_detected, 1, 'first')); 
+R_noise_limit = noise_levels(find(~R_detected, 1, 'first')); 
+
+disp(['Velocity can be detected up to noise level: ', num2str(v_noise_limit)]);
+disp(['Distance can be detected up to noise level: ', num2str(R_noise_limit)]);
+
+if isempty(v_noise_limit)
+    disp('Velocity detection is robust to the tested noise levels.');
+end
+if isempty(R_noise_limit)
+    disp('Distance detection is robust to the tested noise levels.');
+end
+
+if ~isempty(v_noise_limit) && ~isempty(R_noise_limit)
+    if v_noise_limit < R_noise_limit
+        disp('Velocity is more sensitive to noise.');
+    elseif R_noise_limit < v_noise_limit
+        disp('Distance is more sensitive to noise.');
+    else
+        disp('Velocity and Distance are equally sensitive to noise.');
+    end
+end
+
+fprintf('\n');
+
+%% PLOT RECEIVED SIGNAL FROM TWO MOVING OBJECTS
+
+alpha_1 = 0.5;
+alpha_2 = 0.6;
+
+betha = 0.3;
+c = 3e08;
+
+R_1 = 250000;
+R_2 = 200000;
+
+V_1 = 180 * 1000 / 3600;
+V_2 = 216 * 1000 / 3600;
+
+t_d_1 = 2/c*R_1;
+t_d_2 = 2/c*R_2;
+
+f_d_1 = betha*V_1;
+f_d_2 = betha*V_2;
+
+y_t_1 = alpha_1 * cos(2*pi*(f_c+f_d_1)*(t-t_d_1));
+y_t_2 = alpha_2 * cos(2*pi*(f_c+f_d_2)*(t-t_d_2));
+y_t = y_t_1 + y_t_2;
+
+figure;
+plot(t, y_t, 'm', 'LineWidth', 1.5);
+xlabel('Time (s)');
+ylabel('Amplitude');
+title('Received Signal From 2 Moving Objects');
+grid on;
+
+%% ESTIMATE VELOCITY AND DISTANCE USE RECEIVED SIGNAL WITH 2 MOVING OBJECTS
+
+[estimated_V_1, estimated_R_1, estimated_V_2, estimated_R_2] = estimate_speed_and_distance_for_two_objects(y_t, f_s, f_c, c , betha);
+disp(['Estimated Velocity For Moving Object 1: ', num2str(estimated_V_1)])
+disp(['Estimated Distance For Moving Object 1: ', num2str(estimated_R_1)])
+fprintf('\n');
+disp(['Estimated Velocity For Moving Object 2: ', num2str(estimated_V_2)])
+disp(['Estimated Distance For Moving Object 2: ', num2str(estimated_R_2)])
+
+
+
+
